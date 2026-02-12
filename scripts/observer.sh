@@ -14,7 +14,13 @@
 #   OBSERVER_API_URL  — API base URL (default: https://openrouter.ai/api/v1)
 #   LOOKBACK_MIN      — Minutes to look back for changes (default: 20)
 
-set -euo pipefail
+set -eo pipefail
+
+# Validate required env
+if [[ -z "${OPENROUTER_API_KEY:-}" ]]; then
+  echo "ERROR: OPENROUTER_API_KEY not set. Export it or add to .env" >&2
+  exit 1
+fi
 
 # --- Configuration (override via env vars) ---
 OPENCLAW_DIR="${OPENCLAW_DIR:-$HOME/.openclaw}"

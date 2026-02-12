@@ -5,7 +5,13 @@
 # Environment variables:
 #   OPENCLAW_DIR, WORKSPACE_DIR, OPENROUTER_API_KEY, OBSERVER_MODEL, OBSERVER_API_URL
 
-set -euo pipefail
+set -eo pipefail
+
+# Validate required env
+if [[ -z "${OPENROUTER_API_KEY:-}" ]]; then
+  echo "ERROR: OPENROUTER_API_KEY not set. Export it or add to .env" >&2
+  exit 1
+fi
 
 WORKSPACE_DIR="${WORKSPACE_DIR:-$HOME/clawd}"
 OBSERVATIONS_FILE="${WORKSPACE_DIR}/memory/observations.md"
