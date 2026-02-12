@@ -10,7 +10,7 @@
 #   OPENCLAW_DIR      — OpenClaw data directory (default: ~/.openclaw)
 #   WORKSPACE_DIR     — Your agent workspace (default: ~/clawd)
 #   OPENROUTER_API_KEY — API key for OpenRouter (or any OpenAI-compatible API)
-#   OBSERVER_MODEL    — Model to use (default: google/gemini-2.0-flash-001)
+#   OBSERVER_MODEL    — Model to use (default: google/gemini-2.5-flash)
 #   OBSERVER_API_URL  — API base URL (default: https://openrouter.ai/api/v1)
 #   LOOKBACK_MIN      — Minutes to look back for changes (default: 20)
 
@@ -27,7 +27,7 @@ MARKER_FILE="${WORKSPACE_DIR}/memory/.observer-last-run"
 HASH_FILE="${WORKSPACE_DIR}/memory/.observer-last-hash"
 LOCK_FILE="/tmp/observer-running.lock"
 
-MODEL="${OBSERVER_MODEL:-google/gemini-2.0-flash-001}"
+MODEL="${OBSERVER_MODEL:-google/gemini-2.5-flash}"
 API_URL="${OBSERVER_API_URL:-https://openrouter.ai/api/v1/chat/completions}"
 LOOKBACK="${LOOKBACK_MIN:-20}"
 

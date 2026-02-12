@@ -2,7 +2,7 @@
 # install.sh — Interactive installer for OpenClaw Memory
 set -euo pipefail
 
-echo "🧠 OpenClaw Memory — Quad-Redundant Memory Protection"
+echo "🧠 OpenClaw Memory — Five-Layer Memory Protection"
 echo "======================================================"
 echo ""
 
@@ -19,7 +19,7 @@ OPENCLAW_DIR="${OPENCLAW_DIR:-$DEFAULT_OPENCLAW}"
 read -p "OpenRouter API key (or other OpenAI-compatible key): " API_KEY
 
 # Model
-DEFAULT_MODEL="google/gemini-2.0-flash-001"
+DEFAULT_MODEL="google/gemini-2.5-flash"
 read -p "Observer model [$DEFAULT_MODEL]: " MODEL
 MODEL="${MODEL:-$DEFAULT_MODEL}"
 
@@ -72,7 +72,8 @@ echo ""
 echo "Next steps:"
 echo "1. Add the cron job — see config/cron-job.json"
 echo "2. Update your openclaw.json — see config/memory-flush.json"
-echo "3. Add startup snippets to HEARTBEAT.md and AGENTS.md — see templates/"
+echo "3. Add startup snippets to AGENTS.md — see templates/AGENTS-snippet.md"
+echo "   (IMPORTANT: Includes session recovery check)"
 echo "4. (Optional) Start the reactive watcher: $WORKSPACE_DIR/scripts/watcher.sh &"
 echo ""
 echo "Test the observer: $WORKSPACE_DIR/scripts/observer.sh"

@@ -4,11 +4,23 @@
 
 The memory system operates as an external layer on top of OpenClaw's native compaction. It writes to plain Markdown files on disk that survive compaction entirely.
 
+## The Session Handoff Problem
+
+OpenClaw agents face a unique challenge when users manually trigger `/new` or `/reset` during active conversations:
+
+- The **reactive watcher** has a 5-minute cooldown between triggers (to avoid spam during long conversations)
+- If `/new` happens during that cooldown, the watcher won't fire again
+- The **15-minute cron** hasn't run yet
+- The **pre-compaction hook** only fires on automatic compaction (not manual resets)
+- Result: Recent conversation is lost between sessions
+
+**Session Recovery** (Layer 5) solves this by comparing the last session file's hash against what was already observed. If there's a mismatch at startup, it triggers an emergency capture.
+
 ## Components
 
 ### Observer Agent (`scripts/observer.sh`)
 - Reads recent session JSONL transcripts
-- Extracts durable facts via LLM (Gemini Flash recommended)
+- Extracts durable facts via LLM (Gemini 2.5 Flash recommended)
 - Appends to `memory/observations.md` with priority markers
 - Runs every 15 minutes via cron + reactively via watcher
 - Supports `--flush` mode for pre-compaction emergency capture
@@ -30,19 +42,36 @@ The memory system operates as an external layer on top of OpenClaw's native comp
 - We configure it to run the observer in `--flush` mode first
 - 2-hour lookback, skip dedup — maximum capture before context is lost
 
+### Session Recovery (`scripts/session-recovery.sh`)
+- Runs at session startup (BEFORE loading observations)
+- Checks if the last session file matches the last observed hash
+- If not, triggers emergency observer capture
+- Works without git — uses MD5 hash of last 50 lines from session file
+- Catches the gap between manual `/new` resets and the next observer run
+
 ## Data Flow
 
 ```
 User conversations → Session JSONL files (raw, real-time)
     ↓
-Observer (every 15 min + reactive + pre-compaction)
+Observer (5 triggers: every 15 min + reactive + pre-compaction + session recovery + manual)
     ↓
 observations.md (prioritised facts, ~5000 tokens)
     ↓
 Reflector (when >8000 words, consolidate)
     ↓
-Session startup loads: observations.md + favorites.md + daily memory
+Session startup: run session-recovery.sh → load observations.md + favorites.md + daily memory
 ```
+
+## Five-Layer Architecture
+
+1. **⏰ Observer Cron** — Every 15 minutes, guaranteed baseline coverage
+2. **🎯 Reactive Watcher** — Fires after 40 JSONL writes (during heavy conversations)
+3. **🛡️ Pre-Compaction Hook** — Emergency capture right before automatic compaction
+4. **📝 Session Startup Load** — Reads all saved memory files at start of every session
+5. **🔄 Session Recovery** — Checks for missed observations when user manually resets session
+
+This redundancy ensures **no conversation is lost**, even during edge cases like manual resets during watcher cooldowns.
 
 ## Why External Files?
 

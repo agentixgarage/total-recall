@@ -1,4 +1,4 @@
-# OpenClaw Memory — Quad-Redundant Memory Protection
+# OpenClaw Memory — Five-Layer Memory Protection
 
 > Your AI has the same attention problem you do — and we fixed it the same way your brain does.
 
@@ -10,14 +10,15 @@ OpenClaw's context compaction is lossy by design. It takes 200k tokens of conver
 
 ## The Solution
 
-Four layers of protection that work **with** (not against) native compaction:
+Five layers of protection that work **with** (not against) native compaction:
 
 1. ⏰ **Observer Cron** (every 15 min) — Continuously extracts durable facts from session transcripts
 2. 🎯 **Reactive Watcher** (inotify/fswatch) — Fires within seconds during heavy conversations
 3. 🛡️ **Pre-Compaction Hook** (memoryFlush) — Emergency capture right before compaction fires
 4. 📝 **Session Startup** — Loads all saved memory at the start of every new session
+5. 🔄 **Session Recovery** (startup check) — Catches any observations missed by the watcher during manual resets
 
-**Cost:** ~$0.05/day using Gemini Flash via OpenRouter.
+**Cost:** ~$0.10-0.20/month using Gemini 2.5 Flash via OpenRouter.
 **Context overhead:** ~4.5% of window (saves 20-30% that would be wasted re-explaining).
 
 ## Quick Start
@@ -37,7 +38,7 @@ cd openclaw-memory
 
 ```
 Session JSONL files (raw transcripts)
-    ↓ (every 15 min + reactive triggers)
+    ↓ (every 15 min + reactive triggers + pre-compaction + session recovery)
 Observer Agent (compress via LLM → observations.md)
     ↓ (when observations > 8000 words)
 Reflector Agent (consolidate → compressed observations.md)
@@ -51,7 +52,7 @@ See [docs/architecture.md](docs/architecture.md) for the full breakdown.
 
 - OpenClaw (any recent version)
 - bash, jq, curl
-- An LLM API key (OpenRouter recommended — Gemini Flash is ~$0.001/run)
+- An LLM API key (OpenRouter recommended — Gemini 2.5 Flash is ~$0.001/run)
 - `inotify-tools` (Linux) or `fswatch` (macOS) for the reactive watcher
 
 ## Inspired By
