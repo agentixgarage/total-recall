@@ -65,6 +65,27 @@ See [docs/architecture.md](docs/architecture.md) for the full breakdown.
 - An LLM API key (OpenRouter recommended — Gemini 2.5 Flash is ~$0.001/run)
 - `inotify-tools` (Linux) or `fswatch` (macOS) for the reactive watcher
 
+## Best Practice: Real-Time Task Logging (Layer 6)
+
+The five automated layers capture **durable facts** — names, preferences, decisions. But they can miss **active task state**: what you're currently doing, what's been approved, what step is next.
+
+For maximum resilience, teach your agent to write task state to disk **as it happens**, not just when the automated layers fire:
+
+```markdown
+# Add this to your AGENTS.md or equivalent system prompt:
+
+When the user approves an action, when you complete a significant step, 
+or when you receive important details mid-task, immediately append a brief 
+note to today's memory file (memory/YYYY-MM-DD.md). Don't wait for the 
+observer or the flush.
+```
+
+**Why:** If compaction fires mid-task, the automated summary keeps broad strokes but loses specifics. With task state already on disk, the post-compaction session reads the daily file and picks up exactly where things stand.
+
+**Cost:** ~50-100 tokens per write. Negligible compared to the tokens lost re-explaining context after compaction.
+
+Think of it as: the five layers are your safety net. Real-time logging is the discipline that means you rarely need the net.
+
 ## Inspired By
 
 - [Mastra Observational Memory](https://mastra.ai) (94.87% on LongMemEval benchmark)
