@@ -18,7 +18,7 @@ Five layers of protection that work **with** (not against) native compaction:
 4. 📝 **Session Startup** — Loads all saved memory at the start of every new session
 5. 🔄 **Session Recovery** (startup check) — Catches any observations missed by the watcher during manual resets
 
-**Cost:** ~$0.10-0.20/month using Gemini 2.5 Flash via OpenRouter.
+**Cost:** ~$0.10-0.20/month using Gemini 2.5 Flash via OpenRouter. Also works with **local models** (llama.cpp, Ollama, vLLM) — see [FAQ](docs/faq.md).
 **Context overhead:** ~4.5% of window (saves 20-30% that would be wasted re-explaining).
 
 ## Quick Start
