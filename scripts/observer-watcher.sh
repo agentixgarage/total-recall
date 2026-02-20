@@ -1,18 +1,23 @@
 #!/usr/bin/env bash
-# observer-watcher.sh — inotify-based reactive observer trigger
+# observer-watcher.sh — reactive observer trigger (inotifywait on Linux, fswatch on macOS)
 # Part of Total Recall skill
-# Linux only — requires inotifywait. On macOS, use cron-only mode.
 
 set -euo pipefail
 
 SKILL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 source "$SKILL_DIR/scripts/_compat.sh"
 
-# Check inotify availability
-if ! has_inotify; then
-  echo "ERROR: inotifywait not found. The reactive watcher requires Linux with inotify-tools."
-  echo "On macOS, use cron-only mode (observer runs every 15 min via cron)."
-  exit 1
+# Check platform-specific watcher availability
+if $_IS_MACOS; then
+  if ! has_fswatch; then
+    echo "ERROR: fswatch not found. Install it with: brew install fswatch"
+    exit 1
+  fi
+else
+  if ! has_inotify; then
+    echo "ERROR: inotifywait not found. Install: sudo apt install inotify-tools"
+    exit 1
+  fi
 fi
 
 WORKSPACE="${OPENCLAW_WORKSPACE:-$(cd "$SKILL_DIR/../.." && pwd)}"
@@ -123,7 +128,18 @@ MAIN_IDS=$(get_main_session_ids || true)
 CACHE_TIME=$(date +%s)
 log "Tracking $(echo "${MAIN_IDS:-}" | grep -c "." || echo 0) main session files"
 
-inotifywait -m -e modify --format '%f' "$SESSIONS_DIR" 2>/dev/null | while read -r FILENAME; do
+# Output just filenames, regardless of platform
+watch_sessions() {
+  if $_IS_MACOS; then
+    fswatch --event Updated --event Created "$SESSIONS_DIR" 2>/dev/null | while read -r FILEPATH; do
+      basename "$FILEPATH"
+    done
+  else
+    inotifywait -m -e modify --format '%f' "$SESSIONS_DIR" 2>/dev/null
+  fi
+}
+
+watch_sessions | while read -r FILENAME; do
   [[ "$FILENAME" == *.jsonl ]] || continue
   is_main_session "$FILENAME" || continue
   ACCUMULATED_LINES=$(( ACCUMULATED_LINES + 1 ))

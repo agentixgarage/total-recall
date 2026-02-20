@@ -83,7 +83,7 @@ Or use OpenClaw's `memoryFlush.systemPrompt` to inject a startup instruction.
 | Platform | Observer + Reflector + Recovery | Reactive Watcher |
 |----------|-------------------------------|-----------------|
 | Linux (Debian/Ubuntu/etc.) | ✅ Full support | ✅ With inotify-tools |
-| macOS | ✅ Full support | ❌ Not available (cron-only) |
+| macOS | ✅ Full support | ✅ With fswatch (`brew install fswatch`) |
 
 All core scripts use portable bash — `stat`, `date`, and `md5` commands are handled cross-platform via `_compat.sh`.
 
@@ -129,20 +129,26 @@ The setup script creates these OpenClaw cron jobs:
 | `memory-observer` | Every 15 min | Compress recent conversation |
 | `memory-reflector` | Hourly | Consolidate if observations are large |
 
-## Reactive Watcher (Linux only)
+## Reactive Watcher
 
-The reactive watcher uses `inotifywait` to detect session activity and trigger the observer faster than cron alone. It requires Linux with `inotify-tools` installed.
+The reactive watcher detects session activity and triggers the observer faster than cron alone.
 
-On macOS, the watcher is not available — the 15-minute cron provides full coverage.
+- **macOS**: uses `fswatch` (install via `brew install fswatch`), managed by launchd
+- **Linux**: uses `inotifywait` (install via `sudo apt install inotify-tools`), managed by systemd user service
 
 ```bash
-# Install inotify-tools (Debian/Ubuntu)
+# macOS
+brew install fswatch
+bash scripts/setup.sh  # installs launchd service automatically
+
+launchctl list com.total-recall.watcher   # check status
+tail -f logs/observer-watcher.log         # view logs
+
+# Linux (Debian/Ubuntu)
 sudo apt install inotify-tools
+bash scripts/setup.sh  # installs systemd user service automatically
 
-# Check watcher status
 systemctl --user status total-recall-watcher
-
-# View logs
 journalctl --user -u total-recall-watcher -f
 ```
 

@@ -34,13 +34,18 @@ if [ "$MISSING" -eq 1 ]; then
 fi
 echo "✅ Core dependencies found (jq, curl)"
 
-if has_inotify; then
-  echo "✅ inotifywait found (reactive watcher available)"
-else
-  echo "ℹ️  inotifywait not found — reactive watcher won't be available"
-  if $_IS_MACOS; then
-    echo "   This is expected on macOS. Cron-only mode works fine."
+if $_IS_MACOS; then
+  if has_fswatch; then
+    echo "✅ fswatch found (reactive watcher available)"
   else
+    echo "ℹ️  fswatch not found — reactive watcher won't be available"
+    echo "   Install: brew install fswatch"
+  fi
+else
+  if has_inotify; then
+    echo "✅ inotifywait found (reactive watcher available)"
+  else
+    echo "ℹ️  inotifywait not found — reactive watcher won't be available"
     echo "   Install: sudo apt install inotify-tools (Debian/Ubuntu)"
     echo "   Or: sudo dnf install inotify-tools (Fedora/RHEL)"
   fi
@@ -87,8 +92,47 @@ fi
 chmod +x "$SKILL_DIR/scripts/"*.sh
 echo "✅ Scripts made executable"
 
-# --- Install systemd watcher service (Linux only) ---
-if has_inotify && has_systemd_user; then
+# --- Install watcher service (launchd on macOS, systemd on Linux) ---
+if $_IS_MACOS && has_fswatch; then
+  echo ""
+  echo "Installing launchd watcher service..."
+  LAUNCHD_DIR="$HOME/Library/LaunchAgents"
+  PLIST_LABEL="com.total-recall.watcher"
+  PLIST_FILE="$LAUNCHD_DIR/$PLIST_LABEL.plist"
+  mkdir -p "$LAUNCHD_DIR"
+
+  cat > "$PLIST_FILE" << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>$PLIST_LABEL</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>$SKILL_DIR/scripts/observer-watcher.sh</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>OPENCLAW_WORKSPACE</key>
+    <string>$WORKSPACE</string>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>$WORKSPACE/logs/observer-watcher.log</string>
+  <key>StandardErrorPath</key>
+  <string>$WORKSPACE/logs/observer-watcher.log</string>
+</dict>
+</plist>
+EOF
+
+  launchctl unload "$PLIST_FILE" 2>/dev/null || true
+  launchctl load -w "$PLIST_FILE"
+  echo "✅ Watcher launchd service installed and started"
+elif has_inotify && has_systemd_user; then
   echo ""
   echo "Installing reactive watcher service..."
   SYSTEMD_DIR="$HOME/.config/systemd/user"
@@ -116,7 +160,12 @@ EOF
   echo "✅ Watcher service installed and started"
 else
   echo ""
-  echo "ℹ️  Skipping reactive watcher service (requires Linux + systemd + inotify-tools)"
+  echo "ℹ️  Skipping reactive watcher service"
+  if $_IS_MACOS; then
+    echo "   Install fswatch to enable: brew install fswatch"
+  else
+    echo "   Requires Linux + systemd + inotify-tools"
+  fi
   echo "   The cron-based observer (every 15 min) provides full coverage without it."
 fi
 
@@ -148,6 +197,8 @@ echo ""
 echo "Logs:"
 echo "  Observer:  tail -f $WORKSPACE/logs/observer.log"
 echo "  Reflector: tail -f $WORKSPACE/logs/reflector.log"
-if has_inotify && has_systemd_user; then
+if $_IS_MACOS && has_fswatch; then
+  echo "  Watcher:   launchctl list com.total-recall.watcher"
+elif has_inotify && has_systemd_user; then
   echo "  Watcher:   systemctl --user status total-recall-watcher"
 fi
